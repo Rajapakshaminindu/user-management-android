@@ -21,7 +21,7 @@ A modern Android application for managing user data with a clean, intuitive Comp
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Language:** Kotlin
 - **UI Framework:** Jetpack Compose
