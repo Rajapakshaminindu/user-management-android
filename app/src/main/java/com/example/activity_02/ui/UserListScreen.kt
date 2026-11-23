@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -32,8 +33,9 @@ fun UserListScreen(viewModel: UserViewModel) {
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     var showAddUserDialog by remember { mutableStateOf(false) }
+    var userToEdit by remember { mutableStateOf<User?>(null) }
     var userToDelete by remember { mutableStateOf<User?>(null) }
-    var userToUpdate by remember { mutableStateOf<User?>(null) }
+    var userToUpdatePwd by remember { mutableStateOf<User?>(null) }
     var newPassword by remember { mutableStateOf("") }
     var newPasswordError by remember { mutableStateOf<String?>(null) }
     var isNewPasswordVisible by remember { mutableStateOf(false) }
@@ -80,9 +82,10 @@ fun UserListScreen(viewModel: UserViewModel) {
                 items(users) { user ->
                     UserCard(
                         user = user,
+                        onEditClick = { userToEdit = user },
                         onDeleteClick = { userToDelete = user },
                         onUpdatePwdClick = { 
-                            userToUpdate = user
+                            userToUpdatePwd = user
                             newPassword = ""
                             newPasswordError = null
                             isNewPasswordVisible = false
@@ -116,6 +119,18 @@ fun UserListScreen(viewModel: UserViewModel) {
         )
     }
 
+    // Edit User Dialog
+    userToEdit?.let { user ->
+        EditUserDialog(
+            user = user,
+            onDismiss = { userToEdit = null },
+            onConfirm = { updatedUser ->
+                viewModel.update(updatedUser)
+                userToEdit = null
+            }
+        )
+    }
+
     // Delete Confirmation Dialog
     userToDelete?.let { user ->
         AlertDialog(
@@ -141,10 +156,10 @@ fun UserListScreen(viewModel: UserViewModel) {
     }
 
     // Update Password Dialog
-    userToUpdate?.let { user ->
+    userToUpdatePwd?.let { user ->
         AlertDialog(
             onDismissRequest = { 
-                userToUpdate = null
+                userToUpdatePwd = null
                 newPassword = ""
                 newPasswordError = null
             },
@@ -189,7 +204,7 @@ fun UserListScreen(viewModel: UserViewModel) {
                         val validation = UserValidator.validatePassword(newPassword)
                         if (validation.isValid) {
                             viewModel.updatePassword(user.id, newPassword)
-                            userToUpdate = null
+                            userToUpdatePwd = null
                             newPassword = ""
                             newPasswordError = null
                         } else {
@@ -202,7 +217,7 @@ fun UserListScreen(viewModel: UserViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { 
-                    userToUpdate = null
+                    userToUpdatePwd = null
                     newPassword = ""
                     newPasswordError = null
                 }) {
@@ -347,8 +362,106 @@ fun AddUserDialog(
 }
 
 @Composable
+fun EditUserDialog(
+    user: User,
+    onDismiss: () -> Unit,
+    onConfirm: (User) -> Unit
+) {
+    var name by remember { mutableStateOf(user.name) }
+    var email by remember { mutableStateOf(user.email) }
+    var phone by remember { mutableStateOf(user.phone) }
+
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var phoneError by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit User Profile") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        nameError = null
+                    },
+                    label = { Text("Full Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    isError = nameError != null,
+                    supportingText = nameError?.let { { Text(it) } }
+                )
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        emailError = null
+                    },
+                    label = { Text("Email Address") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    isError = emailError != null,
+                    supportingText = emailError?.let { { Text(it) } }
+                )
+
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = {
+                        phone = it
+                        phoneError = null
+                    },
+                    label = { Text("Phone Number") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    isError = phoneError != null,
+                    supportingText = phoneError?.let { { Text(it) } }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val nameVal = UserValidator.validateName(name)
+                    val emailVal = UserValidator.validateEmail(email)
+                    val phoneVal = UserValidator.validatePhone(phone)
+
+                    nameError = nameVal.errorMessage
+                    emailError = emailVal.errorMessage
+                    phoneError = phoneVal.errorMessage
+
+                    if (nameVal.isValid && emailVal.isValid && phoneVal.isValid) {
+                        onConfirm(
+                            user.copy(
+                                name = name.trim(),
+                                email = email.trim(),
+                                phone = phone.trim()
+                            )
+                        )
+                    }
+                }
+            ) {
+                Text("SAVE")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL")
+            }
+        }
+    )
+}
+
+@Composable
 fun UserCard(
     user: User,
+    onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onUpdatePwdClick: () -> Unit
 ) {
@@ -371,12 +484,18 @@ fun UserCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = onUpdatePwdClick) {
+                TextButton(onClick = onEditClick) {
                     Icon(Icons.Default.Edit, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("UPDATE PWD")
+                    Text("EDIT")
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                TextButton(onClick = onUpdatePwdClick) {
+                    Icon(Icons.Default.Key, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("PWD")
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 TextButton(onClick = onDeleteClick) {
                     Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
                     Spacer(modifier = Modifier.width(4.dp))

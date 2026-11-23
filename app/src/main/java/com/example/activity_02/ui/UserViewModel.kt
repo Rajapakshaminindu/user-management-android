@@ -22,6 +22,9 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
         repository = UserRepository(userDao)
     }
 
+    val userCount: StateFlow<Int> = repository.userCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     val filteredUsers: StateFlow<List<User>> = repository.allUsers
         .combine(searchQuery) { users, query ->
             if (query.isBlank()) {
@@ -37,6 +40,10 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     fun insert(user: User) = viewModelScope.launch {
         repository.insert(user)
+    }
+
+    fun update(user: User) = viewModelScope.launch {
+        repository.update(user)
     }
 
     fun updatePassword(userId: Int, newPassword: String) = viewModelScope.launch {
