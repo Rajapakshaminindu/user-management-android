@@ -16,7 +16,7 @@ A modern Android application for managing user profiles with an intuitive Jetpac
 
 ---
 
-## 🛠️ Tech Stack
+ 🛠️ Tech Stack
 
 - **Language:** Kotlin
 - **UI Framework:** Jetpack Compose (Material Design 3)
@@ -27,7 +27,7 @@ A modern Android application for managing user profiles with an intuitive Jetpac
 
 ---
 
-## 🚀 Getting Started
+ 🚀 Getting Started
 
 ### Prerequisites
 - Android Studio Ladybug or later
